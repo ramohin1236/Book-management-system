@@ -10,8 +10,8 @@ const Navbar = () => {
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/books', label: 'Shop' },
-    { to: '/ebooks', label: 'Ebooks' },
-    { to: '/membership', label: 'Membership' },
+    // { to: '/ebooks', label: 'Ebooks' },
+    // { to: '/membership', label: 'Membership' },
     { to: '/books/add', label: 'Add Book' },
   ];
 
@@ -49,6 +49,18 @@ const Navbar = () => {
               className="bg-black text-white p-2 rounded-full hover:bg-gray-800 transition-colors"
             >
               <FaShoppingCart className="h-5 w-5" />
+            </NavLink>
+            <NavLink 
+              to="/signup" 
+              className=" text-black p-2 rounded-full  transition-colors"
+            >
+           Signup
+            </NavLink>
+            <NavLink 
+              to="/signin" 
+              className=" text-black p-2 rounded-full  transition-colors"
+            >
+           Signin
             </NavLink>
 
             {/* Mobile Menu Button - Only visible on mobile */}

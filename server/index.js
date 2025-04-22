@@ -2,8 +2,11 @@ const express = require('express')
 const app = express()
 require('dotenv').config()
 const cors = require('cors')
+const bcrypt = require("bcrypt");
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORt || 3000 ;
+
 
 
 
@@ -12,7 +15,7 @@ app.use(express.json())
 app.use(cors())
 
 
-
+const JWT_SECRET = 'your_secret_key'; 
 
 // ******************************************************
 // connect mongodb
@@ -35,8 +38,84 @@ async function run() {
 // create db and collection
 const db = client.db('book-management-system');
 const bookCollection = db.collection("books")
+const userCollection = db.collection("users");
 
 
+
+// Signup route
+
+app.post('/signup', async (req, res) => {
+  const { name, email, password, role } = req.body;
+
+  if (!email || !password || !name) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const existingUser = await userCollection.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ message: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = {
+      name,
+      email,
+      password: hashedPassword,
+      role: role || "user" 
+    };
+
+    const result = await userCollection.insertOne(newUser);
+
+    res.status(201).json({ message: "User created successfully", userId: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+
+  // Login Route
+  app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+      // 1. Find user by email
+      const user = await userCollection.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ message: 'Invalid email or password' });
+      }
+
+      // 2. Compare password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid email or password' });
+      }
+
+      // 3. Generate JWT
+      const token = jwt.sign(
+        { id: user._id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // 4. Respond with token
+      res.status(200).json({
+        message: 'Login successful',
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email
+        }
+      });
+    } catch (err) {
+      console.error('Login error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
+  
 
 // create a book (POST)
 
