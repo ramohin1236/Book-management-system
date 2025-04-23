@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { baseUrl } from '../../utils/baseUrl';
+import { useNavigate } from 'react-router';
+
+
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -22,13 +26,15 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-
+  
     try {
-      const response = await axios.post(`${baseUrl}/login`,formData);
-
+      const response = await axios.post(`${baseUrl}/login`, formData);
+  
       setSuccess('Login successful!');
       localStorage.setItem('token', response.data.token);
-      // redirect or something you want...
+  
+      navigate('/'); // 🔁 Redirect to home page
+  
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');
     }

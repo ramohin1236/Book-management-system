@@ -75,51 +75,95 @@ app.post('/signup', async (req, res) => {
 });
 
 
-  // Login Route
-  app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+// Login Route
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
 
-    try {
-      // 1. Find user by email
-      const user = await userCollection.findOne({ email });
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid email or password' });
-      }
-
-      // 2. Compare password
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid email or password' });
-      }
-
-      // 3. Generate JWT
-      const token = jwt.sign(
-        { id: user._id, email: user.email },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-
-      // 4. Respond with token
-      res.status(200).json({
-        message: 'Login successful',
-        token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email
-        }
-      });
-    } catch (err) {
-      console.error('Login error:', err);
-      res.status(500).json({ message: 'Server error' });
+  try {
+    const user = await userCollection.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
-  });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    // ⛔️ BEFORE (this doesn't include role)
+    // const token = jwt.sign(
+    //   { id: user._id, email: user.email },
+    //   JWT_SECRET,
+    //   { expiresIn: '7d' }
+    // );
+
+    // ✅ AFTER (include role)
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role // ✅ ADD THIS
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role // Optional: send it in the response too
+      }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Logout route (dummy, for client to call and remove token)
+app.post('/logout', (req, res) => {
+  // Token remove client-side e hobe, ei route just confirmation dey
+  return res.status(200).json({ message: 'Logout successful' });
+});
+
+
 
   
+// Middleware to verify JWT and admin access
+function verifyAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized access" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Now we can use decoded info to check user role
+    userCollection.findOne({ _id: new ObjectId(decoded.id) })
+      .then(user => {
+        if (!user || user.role !== 'admin') {
+          return res.status(403).json({ message: "Access denied. Admins only." });
+        }
+        req.user = user;
+        next();
+      })
+      .catch(err => res.status(500).json({ message: "Internal error", error: err.message }));
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+}
 
 // create a book (POST)
 
-app.post('/books', async(req,res)=>{
+app.post('/books',verifyAdmin, async(req,res)=>{
      const booksData = req.body;
      console.log(booksData)
      try{
@@ -208,7 +252,7 @@ app.get('/books', async(req,res)=>{
 
 // update book
 
-app.put('/books/:id', async(req,res)=>{
+app.put('/books/:id',verifyAdmin, async(req,res)=>{
   const bookId = req.params.id
   try {
     const updateBook = await bookCollection.updateOne({_id : new ObjectId(bookId)}, {$set: req.body});
@@ -221,7 +265,7 @@ app.put('/books/:id', async(req,res)=>{
 
 // delete book
 
-app.delete('/books/:id', async(req,res)=>{
+app.delete('/books/:id',verifyAdmin, async(req,res)=>{
   const bookId = req.params.id
   try {
     const deletedBook = await bookCollection.deleteOne({_id : new ObjectId(bookId)})
