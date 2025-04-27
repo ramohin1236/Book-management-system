@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
-import { baseUrl } from '../../utils/baseUrl';
 import { useNavigate } from 'react-router';
-
-
+import { baseUrl } from '../../utils/baseUrl';
+import { AuthContext } from '../../context/AuthProvider.jsx';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext); // ✅ use login from context
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -26,15 +27,16 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-  
+
     try {
       const response = await axios.post(`${baseUrl}/login`, formData);
-  
+
+      const token = response.data.token;
+
+      login(token); // ✅ updates context and sets localStorage
       setSuccess('Login successful!');
-      localStorage.setItem('token', response.data.token);
-  
-      navigate('/'); // 🔁 Redirect to home page
-  
+      navigate('/');
+
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');
     }
