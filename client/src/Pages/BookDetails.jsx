@@ -8,6 +8,15 @@ const BookDetails = () => {
   const { id } = useParams();
   const { currentBook, loading, error, fetchBookDetails, clearCurrentBook } = useBooks();
 
+  const handleAddToCart = () => {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    cart.push(currentBook);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    
+    // Dispatch event to update navbar
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
+
   window.scrollTo(0, 0);
 
   useEffect(() => {
@@ -95,10 +104,13 @@ const BookDetails = () => {
 
           {/* Action Buttons */}
           <div className="flex space-x-4 pt-6">
-            <button className=" bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600 transition-colors flex items-center justify-center">
-              <FaShoppingCart className="mr-2" />
-              Add to Cart
-            </button>
+            <button
+  onClick={handleAddToCart}
+  className="bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600 transition-colors flex items-center justify-center"
+>
+  <FaShoppingCart className="mr-2" />
+  Add to Cart
+</button>
             <Link 
               to={`/books/edit/${currentBook._id}`}
               className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
